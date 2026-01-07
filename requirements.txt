@@ -1,0 +1,10 @@
+# Data generation with realistic patterns
+faker>=24.0.0
+
+# For LLM-based content generation (lightweight, local inference)
+# Using Ollama for local LLM inference - user needs to install Ollama separately
+# Models: llama3.2:1b or phi3:mini for lightweight generation
+ollama>=0.3.0
+
+# Utilities
+python-dotenv>=1.0.0

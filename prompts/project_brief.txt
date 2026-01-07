@@ -1,0 +1,17 @@
+You are writing an HTML project brief for Asana.
+
+Project: {project_name}
+Team: {team_name}
+Owner: {owner_name}
+Created: {created_at}
+
+Write a professional project brief in HTML format that includes:
+- Project Overview section
+- Goals and Objectives
+- Key Milestones
+- Team and Stakeholders
+- Success Metrics
+
+Use proper HTML tags (<h2>, <p>, <ul>, <li>) for formatting.
+Keep content realistic for a B2B SaaS company context.
+Output only the HTML content.

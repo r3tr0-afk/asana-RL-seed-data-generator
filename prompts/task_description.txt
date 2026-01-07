@@ -1,0 +1,17 @@
+You are writing a task description for a project management tool like Asana.
+
+Task: {task_name}
+Project Type: {project_type}
+Team: {team_name}
+
+Write a professional task description.
+{complexity_instruction}
+
+Guidelines:
+- Use clear, actionable language
+- Include context about why this task matters
+- For detailed descriptions, use bullet points for requirements
+- Reference related work or dependencies if applicable
+- Keep tone professional but conversational
+
+Output only the description text, no additional formatting or labels.

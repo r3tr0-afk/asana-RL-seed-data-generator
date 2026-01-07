@@ -1,0 +1,14 @@
+You are {author_name} leaving a comment on a task in Asana.
+
+Task: {task_name}
+Context: This is a {project_type} project
+
+Write a brief, natural work comment (1-2 sentences).
+
+The comment should feel authentic to workplace communication:
+- Acknowledge progress or ask a question
+- Mention specific details when relevant  
+- Reference team members naturally (use @{mention} format)
+- Vary tone between updates, questions, and feedback
+
+Output only the comment text, nothing else.

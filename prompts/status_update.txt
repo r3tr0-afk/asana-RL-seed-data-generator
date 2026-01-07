@@ -1,0 +1,16 @@
+You are {author_name} writing a project status update in Asana.
+
+Project: {project_name}
+Status: {status_type} (on_track / at_risk / off_track)
+
+Write a brief status update that includes:
+1. Current state summary (1 sentence)
+2. Recent accomplishments (1-2 bullet points)
+3. Next steps or blockers (1 bullet point)
+
+Match the tone to the status:
+- on_track: Confident, highlighting progress
+- at_risk: Concerned but proactive, mentioning mitigation
+- off_track: Urgent, clearly stating blockers and needs
+
+Keep it professional and concise. Output only the update text.

@@ -1,0 +1,197 @@
+// Asana Simulation Database - ER Diagram
+// View at: https://dbdiagram.io
+
+Table workspaces {
+  gid text [pk]
+  name text [not null]
+  domain text [unique, not null]
+  is_organization boolean [default: 1]
+  created_at timestamp
+}
+
+Table users {
+  gid text [pk]
+  workspace_gid text [not null, ref: > workspaces.gid]
+  email text [unique, not null]
+  name text [not null]
+  photo_url text
+  status text
+  created_at timestamp
+}
+
+Table workspace_memberships {
+  workspace_gid text [ref: > workspaces.gid]
+  user_gid text [ref: > users.gid]
+  is_guest boolean [default: 0]
+  created_at timestamp
+  
+  indexes {
+    (workspace_gid, user_gid) [pk]
+  }
+}
+
+Table teams {
+  gid text [pk]
+  workspace_gid text [not null, ref: > workspaces.gid]
+  name text [not null]
+  description text
+  created_at timestamp
+}
+
+Table team_memberships {
+  team_gid text [ref: > teams.gid]
+  user_gid text [ref: > users.gid]
+  workspace_gid text
+  role text
+  is_guest boolean [default: 0]
+  
+  indexes {
+    (team_gid, user_gid) [pk]
+  }
+}
+
+Table portfolios {
+  gid text [pk]
+  workspace_gid text [not null, ref: > workspaces.gid]
+  owner_gid text [ref: > users.gid]
+  name text [not null]
+  color text
+  created_at timestamp
+}
+
+Table goals {
+  gid text [pk]
+  workspace_gid text [not null, ref: > workspaces.gid]
+  owner_gid text [ref: > users.gid]
+  name text [not null]
+  due_on date
+  is_completed boolean [default: 0]
+  created_at timestamp
+}
+
+Table projects {
+  gid text [pk]
+  workspace_gid text [not null, ref: > workspaces.gid]
+  team_gid text [ref: > teams.gid]
+  owner_gid text [ref: > users.gid]
+  name text [not null]
+  archetype text
+  layout text [default: 'list']
+  current_status text
+  due_date date
+  archived boolean [default: 0]
+  created_at timestamp
+}
+
+Table sections {
+  gid text [pk]
+  workspace_gid text [not null]
+  project_gid text [not null, ref: > projects.gid]
+  name text [not null]
+  order_index integer [not null]
+}
+
+Table tasks {
+  gid text [pk]
+  workspace_gid text [not null, ref: > workspaces.gid]
+  assignee_gid text [ref: > users.gid]
+  parent_task_gid text [ref: > tasks.gid]
+  name text [not null]
+  description text
+  created_at timestamp [not null]
+  start_on date
+  due_on date
+  completed_at timestamp
+  completed boolean [default: 0]
+  is_milestone boolean [default: 0]
+}
+
+Table task_project_memberships {
+  workspace_gid text [not null]
+  task_gid text [ref: > tasks.gid]
+  project_gid text [ref: > projects.gid]
+  section_gid text [ref: > sections.gid]
+  
+  indexes {
+    (task_gid, project_gid) [pk]
+  }
+}
+
+Table stories {
+  gid text [pk]
+  workspace_gid text [not null, ref: > workspaces.gid]
+  task_gid text [not null, ref: > tasks.gid]
+  created_by_gid text [ref: > users.gid]
+  text text [not null]
+  type text [default: 'comment']
+  created_at timestamp
+}
+
+Table attachments {
+  gid text [pk]
+  workspace_gid text [not null, ref: > workspaces.gid]
+  parent_task_gid text [ref: > tasks.gid]
+  parent_brief_gid text
+  name text [not null]
+  resource_url text
+  resource_type text
+  created_at timestamp
+  created_by_gid text [ref: > users.gid]
+}
+
+Table tags {
+  gid text [pk]
+  workspace_gid text [not null, ref: > workspaces.gid]
+  name text [not null]
+  color text
+}
+
+Table task_tags {
+  workspace_gid text [not null]
+  task_gid text [ref: > tasks.gid]
+  tag_gid text [ref: > tags.gid]
+  
+  indexes {
+    (task_gid, tag_gid) [pk]
+  }
+}
+
+Table likes {
+  gid text [pk]
+  workspace_gid text [not null, ref: > workspaces.gid]
+  user_gid text [not null, ref: > users.gid]
+  task_gid text [ref: > tasks.gid]
+  story_gid text [ref: > stories.gid]
+}
+
+Table custom_field_definitions {
+  gid text [pk]
+  workspace_gid text [not null, ref: > workspaces.gid]
+  name text [not null]
+  resource_subtype text
+}
+
+Table custom_field_values {
+  workspace_gid text [not null]
+  task_gid text [ref: > tasks.gid]
+  field_gid text [ref: > custom_field_definitions.gid]
+  text_value text
+  number_value real
+  enum_option_gid text
+  
+  indexes {
+    (task_gid, field_gid) [pk]
+  }
+}
+
+Table status_updates {
+  gid text [pk]
+  workspace_gid text [not null, ref: > workspaces.gid]
+  author_gid text [ref: > users.gid]
+  status_type text
+  text text [not null]
+  created_at timestamp
+  parent_project_gid text [ref: > projects.gid]
+  parent_portfolio_gid text [ref: > portfolios.gid]
+  parent_goal_gid text [ref: > goals.gid]
+}
