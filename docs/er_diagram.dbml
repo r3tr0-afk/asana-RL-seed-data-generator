@@ -1,101 +1,225 @@
 // Asana Simulation Database - ER Diagram
 // View at: https://dbdiagram.io
 
+
+Enum user_status {
+  active
+  away
+  dnd
+  deactivated
+}
+
+Enum team_role {
+  admin
+  member
+  commenter
+}
+
+Enum project_status {
+  on_track
+  at_risk
+  off_track
+}
+
+Enum status_update_type {
+  on_track
+  at_risk
+  off_track
+}
+
+Enum dependency_type {
+  finish_to_start
+  start_to_start
+  finish_to_finish
+}
+
+Enum story_type {
+  comment
+  system
+}
+
+Enum resource_type {
+  image
+  video
+  pdf
+  spreadsheet
+}
+
+Enum custom_field_type {
+  text
+  enum
+  number
+  multi_enum
+}
+
+// --- Tables ---
+
 Table workspaces {
   gid text [pk]
   name text [not null]
-  domain text [unique, not null]
+  domain text [not null, unique]
   is_organization boolean [default: 1]
-  created_at timestamp
+  created_at timestamp [default: `CURRENT_TIMESTAMP`]
 }
 
 Table users {
   gid text [pk]
-  workspace_gid text [not null, ref: > workspaces.gid]
-  email text [unique, not null]
+  workspace_gid text [not null] // Logical FK, but physically part of composite unique
+  email text [not null, unique]
   name text [not null]
   photo_url text
-  status text
-  created_at timestamp
+  status user_status [default: 'active']
+  created_at timestamp [default: `CURRENT_TIMESTAMP`]
+
+  Indexes {
+    (gid, workspace_gid) [unique]
+  }
 }
 
 Table workspace_memberships {
-  workspace_gid text [ref: > workspaces.gid]
-  user_gid text [ref: > users.gid]
+  workspace_gid text [not null]
+  user_gid text [not null]
   is_guest boolean [default: 0]
-  created_at timestamp
-  
-  indexes {
+  created_at timestamp [default: `CURRENT_TIMESTAMP`]
+
+  Indexes {
     (workspace_gid, user_gid) [pk]
   }
 }
 
 Table teams {
   gid text [pk]
-  workspace_gid text [not null, ref: > workspaces.gid]
+  workspace_gid text [not null]
   name text [not null]
   description text
-  created_at timestamp
+  created_at timestamp [default: `CURRENT_TIMESTAMP`]
+
+  Indexes {
+    (workspace_gid, name) [unique]
+    (gid, workspace_gid) [unique]
+  }
 }
 
 Table team_memberships {
-  team_gid text [ref: > teams.gid]
-  user_gid text [ref: > users.gid]
-  workspace_gid text
-  role text
+  team_gid text [not null]
+  user_gid text [not null]
+  workspace_gid text [not null]
+  role team_role [default: 'member']
   is_guest boolean [default: 0]
-  
-  indexes {
+
+  Indexes {
     (team_gid, user_gid) [pk]
   }
 }
 
 Table portfolios {
   gid text [pk]
-  workspace_gid text [not null, ref: > workspaces.gid]
-  owner_gid text [ref: > users.gid]
+  workspace_gid text [not null]
+  owner_gid text
   name text [not null]
   color text
-  created_at timestamp
+  created_at timestamp [default: `CURRENT_TIMESTAMP`]
+
+  Indexes {
+    (gid, workspace_gid) [unique]
+  }
+}
+
+Table portfolio_items {
+  portfolio_gid text [not null]
+  workspace_gid text [not null]
+  linked_project_gid text
+  linked_portfolio_gid text
+  created_at timestamp [default: `CURRENT_TIMESTAMP`]
+
+  Note: "One of linked_project_gid or linked_portfolio_gid must be set (XOR)"
+  Indexes {
+    (portfolio_gid, linked_project_gid, linked_portfolio_gid) [pk]
+  }
 }
 
 Table goals {
   gid text [pk]
-  workspace_gid text [not null, ref: > workspaces.gid]
-  owner_gid text [ref: > users.gid]
+  workspace_gid text [not null]
+  owner_gid text
   name text [not null]
   due_on date
   is_completed boolean [default: 0]
-  created_at timestamp
+  created_at timestamp [default: `CURRENT_TIMESTAMP`]
 }
 
 Table projects {
   gid text [pk]
-  workspace_gid text [not null, ref: > workspaces.gid]
-  team_gid text [ref: > teams.gid]
-  owner_gid text [ref: > users.gid]
+  workspace_gid text [not null]
+  team_gid text
+  owner_gid text
   name text [not null]
   archetype text
   layout text [default: 'list']
-  current_status text
+  current_status project_status [default: 'on_track']
   due_date date
   archived boolean [default: 0]
-  created_at timestamp
+  created_at timestamp [default: `CURRENT_TIMESTAMP`]
+
+  Indexes {
+    (gid, workspace_gid) [unique]
+  }
+}
+
+Table project_templates {
+  gid text [pk]
+  team_gid text [not null]
+  name text [not null]
+  structure_json text
+  created_at timestamp [default: `CURRENT_TIMESTAMP`]
+}
+
+Table project_briefs {
+  gid text [pk]
+  workspace_gid text [not null]
+  project_gid text [not null]
+  html_text text [not null]
+  title text [default: 'Overview']
+  created_at timestamp [default: `CURRENT_TIMESTAMP`]
+
+  Indexes {
+    (gid, workspace_gid) [unique]
+    (project_gid) [unique]
+  }
+}
+
+Table status_updates {
+  gid text [pk]
+  workspace_gid text [not null]
+  author_gid text
+  status_type status_update_type
+  text text [not null]
+  created_at timestamp [default: `CURRENT_TIMESTAMP`]
+  parent_project_gid text
+  parent_portfolio_gid text
+  parent_goal_gid text
+
+  Note: "Polymorphic Parent: Project OR Portfolio OR Goal"
 }
 
 Table sections {
   gid text [pk]
   workspace_gid text [not null]
-  project_gid text [not null, ref: > projects.gid]
+  project_gid text [not null]
   name text [not null]
   order_index integer [not null]
+
+  Indexes {
+    (gid, project_gid) [unique]
+    (gid, workspace_gid) [unique]
+  }
 }
 
 Table tasks {
   gid text [pk]
-  workspace_gid text [not null, ref: > workspaces.gid]
-  assignee_gid text [ref: > users.gid]
-  parent_task_gid text [ref: > tasks.gid]
+  workspace_gid text [not null]
+  assignee_gid text
+  parent_task_gid text
   name text [not null]
   description text
   created_at timestamp [not null]
@@ -104,94 +228,272 @@ Table tasks {
   completed_at timestamp
   completed boolean [default: 0]
   is_milestone boolean [default: 0]
+
+  Indexes {
+    (gid, workspace_gid) [unique]
+  }
 }
 
 Table task_project_memberships {
   workspace_gid text [not null]
-  task_gid text [ref: > tasks.gid]
-  project_gid text [ref: > projects.gid]
-  section_gid text [ref: > sections.gid]
-  
-  indexes {
+  task_gid text [not null]
+  project_gid text [not null]
+  section_gid text
+
+  Indexes {
     (task_gid, project_gid) [pk]
+  }
+}
+
+Table task_dependencies {
+  workspace_gid text [not null]
+  predecessor_gid text [not null]
+  successor_gid text [not null]
+  type dependency_type [default: 'finish_to_start']
+
+  Indexes {
+    (predecessor_gid, successor_gid) [pk]
+  }
+}
+
+Table task_followers {
+  workspace_gid text [not null]
+  task_gid text [not null]
+  user_gid text [not null]
+
+  Indexes {
+    (task_gid, user_gid) [pk]
   }
 }
 
 Table stories {
   gid text [pk]
-  workspace_gid text [not null, ref: > workspaces.gid]
-  task_gid text [not null, ref: > tasks.gid]
-  created_by_gid text [ref: > users.gid]
+  workspace_gid text [not null]
+  task_gid text [not null]
+  created_by_gid text
   text text [not null]
-  type text [default: 'comment']
-  created_at timestamp
+  type story_type [default: 'comment']
+  created_at timestamp [default: `CURRENT_TIMESTAMP`]
+
+  Indexes {
+    (gid, workspace_gid) [unique]
+  }
 }
 
 Table attachments {
   gid text [pk]
-  workspace_gid text [not null, ref: > workspaces.gid]
-  parent_task_gid text [ref: > tasks.gid]
+  workspace_gid text [not null]
+  parent_task_gid text
   parent_brief_gid text
   name text [not null]
   resource_url text
-  resource_type text
-  created_at timestamp
-  created_by_gid text [ref: > users.gid]
+  resource_type resource_type
+  created_at timestamp [default: `CURRENT_TIMESTAMP`]
+  created_by_gid text
+
+  Note: "Parent is either Task or Project Brief"
 }
 
 Table tags {
   gid text [pk]
-  workspace_gid text [not null, ref: > workspaces.gid]
+  workspace_gid text [not null]
   name text [not null]
   color text
+  
+  Indexes {
+    (workspace_gid, name) [unique]
+    (gid, workspace_gid) [unique]
+  }
 }
 
 Table task_tags {
   workspace_gid text [not null]
-  task_gid text [ref: > tasks.gid]
-  tag_gid text [ref: > tags.gid]
-  
-  indexes {
+  task_gid text [not null]
+  tag_gid text [not null]
+
+  Indexes {
     (task_gid, tag_gid) [pk]
   }
 }
 
 Table likes {
   gid text [pk]
-  workspace_gid text [not null, ref: > workspaces.gid]
-  user_gid text [not null, ref: > users.gid]
-  task_gid text [ref: > tasks.gid]
-  story_gid text [ref: > stories.gid]
+  workspace_gid text [not null]
+  user_gid text [not null]
+  task_gid text
+  story_gid text
+
+  Note: "Target is either Task or Story"
 }
 
 Table custom_field_definitions {
   gid text [pk]
-  workspace_gid text [not null, ref: > workspaces.gid]
+  workspace_gid text [not null]
   name text [not null]
-  resource_subtype text
+  resource_subtype custom_field_type
+
+  Indexes {
+    (workspace_gid, name) [unique]
+    (gid, workspace_gid) [unique]
+  }
+}
+
+Table custom_field_options {
+  gid text [pk]
+  field_gid text [not null]
+  workspace_gid text [not null]
+  name text [not null]
+  color text
+}
+
+Table project_custom_field_settings {
+  workspace_gid text [not null]
+  project_gid text [not null]
+  custom_field_gid text [not null]
+  is_important boolean [default: 0]
+
+  Indexes {
+    (project_gid, custom_field_gid) [pk]
+  }
+}
+
+Table portfolio_custom_field_settings {
+  workspace_gid text [not null]
+  portfolio_gid text [not null]
+  custom_field_gid text [not null]
+
+  Indexes {
+    (portfolio_gid, custom_field_gid) [pk]
+  }
 }
 
 Table custom_field_values {
   workspace_gid text [not null]
-  task_gid text [ref: > tasks.gid]
-  field_gid text [ref: > custom_field_definitions.gid]
+  task_gid text [not null]
+  field_gid text [not null]
   text_value text
   number_value real
   enum_option_gid text
-  
-  indexes {
+
+  Indexes {
     (task_gid, field_gid) [pk]
   }
 }
 
-Table status_updates {
-  gid text [pk]
-  workspace_gid text [not null, ref: > workspaces.gid]
-  author_gid text [ref: > users.gid]
-  status_type text
-  text text [not null]
-  created_at timestamp
-  parent_project_gid text [ref: > projects.gid]
-  parent_portfolio_gid text [ref: > portfolios.gid]
-  parent_goal_gid text [ref: > goals.gid]
+Table portfolio_custom_field_values {
+  workspace_gid text [not null]
+  portfolio_gid text [not null]
+  field_gid text [not null]
+  text_value text
+  number_value real
+  enum_option_gid text
+
+  Indexes {
+    (portfolio_gid, field_gid) [pk]
+  }
 }
+
+Table _meta_provenance {
+  id integer [pk, increment]
+  batch_id text [not null]
+  entity_type text [not null]
+  source_strategy text [not null]
+  row_count integer
+  timestamp timestamp [default: `CURRENT_TIMESTAMP`]
+}
+
+// --- Relationships ---
+
+// Workspaces & Users
+Ref: users.workspace_gid > workspaces.gid
+Ref: workspace_memberships.workspace_gid > workspaces.gid
+Ref: workspace_memberships.user_gid > users.gid
+
+// Teams
+Ref: teams.workspace_gid > workspaces.gid
+Ref: team_memberships.team_gid > teams.gid
+Ref: team_memberships.user_gid > users.gid
+Ref: team_memberships.workspace_gid > workspaces.gid
+
+// Portfolios
+Ref: portfolios.workspace_gid > workspaces.gid
+Ref: portfolios.owner_gid > users.gid
+Ref: portfolio_items.portfolio_gid > portfolios.gid
+Ref: portfolio_items.linked_project_gid > projects.gid
+Ref: portfolio_items.linked_portfolio_gid > portfolios.gid
+
+// Goals
+Ref: goals.workspace_gid > workspaces.gid
+Ref: goals.owner_gid > users.gid
+
+// Projects
+Ref: projects.workspace_gid > workspaces.gid
+Ref: projects.team_gid > teams.gid
+Ref: projects.owner_gid > users.gid
+Ref: project_templates.team_gid > teams.gid
+Ref: project_briefs.project_gid > projects.gid
+Ref: project_briefs.workspace_gid > workspaces.gid
+
+// Status Updates (Polymorphic)
+Ref: status_updates.workspace_gid > workspaces.gid
+Ref: status_updates.author_gid > users.gid
+Ref: status_updates.parent_project_gid > projects.gid
+Ref: status_updates.parent_portfolio_gid > portfolios.gid
+Ref: status_updates.parent_goal_gid > goals.gid
+
+// Sections
+Ref: sections.project_gid > projects.gid
+Ref: sections.workspace_gid > workspaces.gid
+
+// Tasks
+Ref: tasks.workspace_gid > workspaces.gid
+Ref: tasks.assignee_gid > users.gid
+Ref: tasks.parent_task_gid > tasks.gid // Recursive
+Ref: task_project_memberships.task_gid > tasks.gid
+Ref: task_project_memberships.project_gid > projects.gid
+Ref: task_project_memberships.section_gid > sections.gid
+
+// Task Dependencies
+Ref: task_dependencies.predecessor_gid > tasks.gid
+Ref: task_dependencies.successor_gid > tasks.gid
+Ref: task_dependencies.workspace_gid > workspaces.gid
+
+// Followers
+Ref: task_followers.task_gid > tasks.gid
+Ref: task_followers.user_gid > users.gid
+
+// Stories (Comments)
+Ref: stories.task_gid > tasks.gid
+Ref: stories.created_by_gid > users.gid
+Ref: stories.workspace_gid > workspaces.gid
+
+// Attachments
+Ref: attachments.parent_task_gid > tasks.gid
+Ref: attachments.parent_brief_gid > project_briefs.gid
+Ref: attachments.created_by_gid > users.gid
+
+// Tags
+Ref: tags.workspace_gid > workspaces.gid
+Ref: task_tags.task_gid > tasks.gid
+Ref: task_tags.tag_gid > tags.gid
+
+// Likes
+Ref: likes.user_gid > users.gid
+Ref: likes.task_gid > tasks.gid
+Ref: likes.story_gid > stories.gid
+
+// Custom Fields
+Ref: custom_field_definitions.workspace_gid > workspaces.gid
+Ref: custom_field_options.field_gid > custom_field_definitions.gid
+Ref: project_custom_field_settings.project_gid > projects.gid
+Ref: project_custom_field_settings.custom_field_gid > custom_field_definitions.gid
+Ref: portfolio_custom_field_settings.portfolio_gid > portfolios.gid
+Ref: portfolio_custom_field_settings.custom_field_gid > custom_field_definitions.gid
+
+// Custom Field Values
+Ref: custom_field_values.task_gid > tasks.gid
+Ref: custom_field_values.field_gid > custom_field_definitions.gid
+Ref: custom_field_values.enum_option_gid > custom_field_options.gid
+Ref: portfolio_custom_field_values.portfolio_gid > portfolios.gid
+Ref: portfolio_custom_field_values.field_gid > custom_field_definitions.gid
+Ref: portfolio_custom_field_values.enum_option_gid > custom_field_options.gid
